@@ -1,5 +1,6 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_restful import reqparse, abort, Api, Resource
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 api = Api(app)
@@ -15,8 +16,8 @@ def abort_if_todo_doesnt_exist(todo_id):
     if todo_id not in TODOS:
         abort(404, message="Todo {} doesn't exist".format(todo_id))
 
-parser = reqparse.RequestParser()
-parser.add_argument('task')
+# parser = reqparse.RequestParser()
+# parser.add_argument('task')
 
 
 # Todo
@@ -33,7 +34,7 @@ class Todo(Resource):
 
     def put(self, todo_id):
         args = parser.parse_args()
-        task = {'task': args['task']}
+        # task = {'task': args['task']}
         TODOS[todo_id] = task
         return task, 201
 
@@ -45,10 +46,10 @@ class TodoList(Resource):
         return TODOS
 
     def post(self):
-        args = parser.parse_args()
+        un = request.form["sugang"]
         todo_id = int(max(TODOS.keys()).lstrip('todo')) + 1
         todo_id = 'todo%i' % todo_id
-        TODOS[todo_id] = {'task': args['task']}
+        TODOS[todo_id] = {'task': un}
         return TODOS[todo_id], 201
 
 ##
