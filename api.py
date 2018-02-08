@@ -1,63 +1,73 @@
 from flask import Flask, jsonify, request
 from flask_restful import reqparse, abort, Api, Resource
 from flask_sqlalchemy import SQLAlchemy
-
+import time
+import datetime
+import os
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI']='postgresql://localhost/restdatabase'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=False
+
 api = Api(app)
-
-TODOS = {
-    'todo1': {'task': 'build an API'},
-    'todo2': {'task': '?????'},
-    'todo3': {'task': 'profit!'},
-}
+db = SQLAlchemy(app)
 
 
-def abort_if_todo_doesnt_exist(todo_id):
-    if todo_id not in TODOS:
-        abort(404, message="Todo {} doesn't exist".format(todo_id))
+from models import *
 
-# parser = reqparse.RequestParser()
-# parser.add_argument('task')
-
-
-# Todo
 # shows a single todo item and lets you delete a todo item
-class Todo(Resource):
-    def get(self, todo_id):
-        abort_if_todo_doesnt_exist(todo_id)
-        return TODOS[todo_id]
+class Particle(Resource):
+    def get(self, frame_id):
+        query=Result.query.get(frame_id)
+        js=''
+        js+='"{'
+        js+=' "timestamp" : " '+query.timestamp+' ", '
+        js+=' "particles" : " '+query.particles+' " '
+        js+='}"'
+        return js
 
-    def delete(self, todo_id):
-        abort_if_todo_doesnt_exist(todo_id)
+    def delete(self, frame_id):
+        abort_if_todo_doesnt_exist(frame_id)
         del TODOS[todo_id]
         return '', 204
 
-    def put(self, todo_id):
+    def put(self, frame_id):
         args = parser.parse_args()
-        # task = {'task': args['task']}
         TODOS[todo_id] = task
         return task, 201
 
-
-# TodoList
 # shows a list of all todos, and lets you POST to add new tasks
-class TodoList(Resource):
+class ParticleList(Resource):
     def get(self):
-        return TODOS
+    	query=Result.query.all()
+    	js='"{'
+    	for i in query:
+    		js+=str(i.id)+':'
+    		js+='{'
+    		js+=' "timestamp" : " '+i.timestamp+' ", '
+    		js+=' "particles" : " '+i.particles+' " '
+    		js+='}'
+
+    	js=js[:-1]
+    	js+='}"'
+
+        print("js : "+js)
+    	return js
 
     def post(self):
-        un = request.form["sugang"]
-        todo_id = int(max(TODOS.keys()).lstrip('todo')) + 1
-        todo_id = 'todo%i' % todo_id
-        TODOS[todo_id] = {'task': un}
-        return TODOS[todo_id], 201
+        ts = time.time()
+        timeStamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+        particlesStr = request.form["particles"]
+        print("ourtime: ",ts,particlesStr)
+        result = Result(
+            timestamp=timeStamp,
+            particles=particlesStr
+            )
+        db.session.add(result)
+        db.session.commit()
+        return timeStamp, 201
 
-##
-## Actually setup the Api resource routing here
-##
-api.add_resource(TodoList, '/todos')
-api.add_resource(Todo, '/todos/<todo_id>')
-
+api.add_resource(ParticleList, '/particles')
+api.add_resource(Particle, '/particles/<frame_id>')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True)
